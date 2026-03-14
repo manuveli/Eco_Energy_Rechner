@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wärmelieferungsrechner – ECOenergy Friedrichsdorf</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700;800&display=swap');
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg:#0d1017; --surface:#151922; --card:#1a1f2e; --border:#252d40;
+    --accent:#e8660a; --accent2:#f5a623; --text:#e4e8f2; --muted:#6a7490;
+    --green:#2dc98a; --blue:#4fa8ea; --red:#e84f4f; --yellow:#f5c842;
+    --radius:10px; --mono:'DM Mono',monospace; --sans:'Syne',sans-serif;
+  }
+  body { font-family:var(--sans); background:var(--bg); color:var(--text); min-height:100vh; padding:28px 16px 80px; line-height:1.5; }
+  header { max-width:920px; margin:0 auto 28px; padding-bottom:18px; border-bottom:1px solid var(--border); }
+  .hbadge { font-family:var(--mono); font-size:11px; letter-spacing:.15em; color:var(--accent); margin-bottom:8px; }
+  header h1 { font-size:24px; font-weight:800; margin-bottom:4px; }
+  header p { color:var(--muted); font-size:13px; }
+  .nav-tabs { display:flex; gap:4px; max-width:920px; margin:0 auto 22px; flex-wrap:wrap; }
+  .nav-tab { flex:1; min-width:100px; padding:9px 8px; border-radius:7px; border:1px solid var(--border); background:var(--card); color:var(--muted); font-family:var(--sans); font-size:12px; font-weight:700; cursor:pointer; text-align:center; transition:all .15s; }
+  .nav-tab.active { background:var(--accent); border-color:var(--accent); color:#fff; }
+  .nav-tab:hover:not(.active) { border-color:var(--accent); color:var(--accent); }
+  .main { max-width:920px; margin:0 auto; }
+  .tab-page { display:none; }
+  .tab-page.active { display:block; }
+  .g2 { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .g3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; }
+  @media(max-width:600px){.g2,.g3{grid-template-columns:1fr;}}
+  .card { background:var(--card); border:1px solid var(--border); border-radius:var(--radius); margin-bottom:12px; overflow:hidden; }
+  .card-head { display:flex; align-items:center; gap:10px; padding:12px 16px; border-bottom:1px solid var(--border); }
+  .cnum { width:22px;height:22px;border-radius:50%;background:var(--accent);color:#fff;font-family:var(--mono);font-size:11px;font-weight:500;display:flex;align-items:center;justify-content:center;flex-shrink:0; }
+  .cnum.b{background:var(--blue);} .cnum.g{background:var(--green);} .cnum.y{background:var(--yellow);color:#111;}
+  .card-title { font-size:13px; font-weight:700; letter-spacing:.02em; flex:1; }
+  .card-sub { font-family:var(--mono); font-size:10px; color:var(--muted); }
+  .card-body { padding:16px; }
+  .field { margin-bottom:12px; }
+  .field:last-child{margin-bottom:0;}
+  label { display:block; font-size:10px; font-weight:700; color:var(--muted); letter-spacing:.06em; text-transform:uppercase; margin-bottom:4px; }
+  label span { font-family:var(--mono); font-weight:400; text-transform:none; letter-spacing:0; color:var(--accent2); font-size:10px; }
+  input[type="number"],input[type="text"] { width:100%; background:var(--surface); border:1px solid var(--border); border-radius:6px; color:var(--text); font-family:var(--mono); font-size:14px; padding:8px 11px; outline:none; transition:border-color .15s; appearance:textfield; -moz-appearance:textfield; }
+  input:focus{border-color:var(--accent);}
+  input[readonly]{color:var(--muted);background:var(--bg);}
+  .hint{margin-top:3px;font-size:11px;color:var(--muted);line-height:1.4;}
+  .hint a{color:var(--blue);text-decoration:none;}
+  .formula{background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:6px;padding:10px 12px;margin-bottom:12px;font-family:var(--mono);font-size:12px;color:var(--accent2);line-height:1.7;white-space:pre-wrap;}
+  .ibox{background:rgba(79,168,234,.07);border:1px solid rgba(79,168,234,.18);border-radius:6px;padding:10px 12px;margin-bottom:12px;font-size:12px;color:#9dc8ea;line-height:1.6;}
+  .wbox{background:rgba(232,102,10,.07);border:1px solid rgba(232,102,10,.2);border-radius:6px;padding:10px 12px;margin-bottom:12px;font-size:12px;color:#f0aa70;line-height:1.6;}
+  .gbox{background:rgba(45,201,138,.07);border:1px solid rgba(45,201,138,.18);border-radius:6px;padding:10px 12px;margin-bottom:12px;font-size:12px;color:#7dddb0;line-height:1.6;}
+  .divider{border-top:1px solid var(--border);margin:12px 0;}
+  .rrow{display:flex;justify-content:space-between;align-items:baseline;padding:8px 0;border-bottom:1px solid var(--border);gap:10px;}
+  .rrow:last-child{border-bottom:none;}
+  .rlabel{font-size:12px;color:var(--muted);flex:1;line-height:1.4;}
+  .rlabel strong{color:var(--text);font-weight:600;}
+  .rval{font-family:var(--mono);font-size:13px;color:var(--green);text-align:right;white-space:nowrap;}
+  .rval.total{font-size:20px;color:var(--accent2);}
+  .rval.dim{color:var(--muted);font-size:11px;}
+  .rval.red{color:var(--red);} .rval.blue{color:var(--blue);} .rval.yel{color:var(--yellow);}
+  .btn{width:100%;background:var(--accent);color:#fff;border:none;border-radius:8px;padding:14px;font-family:var(--sans);font-size:14px;font-weight:700;letter-spacing:.04em;cursor:pointer;transition:background .15s;margin-bottom:12px;}
+  .btn:hover{background:#d4590a;}
+  .vtable{width:100%;border-collapse:collapse;font-size:12px;}
+  .vtable th{background:var(--surface);color:var(--muted);font-size:10px;letter-spacing:.06em;text-transform:uppercase;padding:8px 10px;text-align:left;border-bottom:1px solid var(--border);}
+  .vtable th:not(:first-child){text-align:right;}
+  .vtable td{padding:8px 10px;border-bottom:1px solid rgba(37,45,64,.4);font-family:var(--mono);font-size:12px;}
+  .vtable td:not(:first-child):not(.lc){text-align:right;}
+  .vtable tr:last-child td{border-bottom:none;}
+  .vtable tr.tr{font-weight:700;border-top:1px solid var(--border);}
+  .vtable tr.tr td{padding-top:10px;}
+  .lc{font-family:var(--sans);font-size:12px;color:var(--text);}
+  .lc.sub{color:var(--muted);font-size:11px;font-family:var(--mono);padding-left:20px;}
+  .td-red{color:var(--red);} .td-yel{color:var(--yellow);}
+  .vbadge{display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;font-family:var(--mono);}
+  .vbadge.ok{background:rgba(45,201,138,.15);color:var(--green);}
+  .vbadge.err{background:rgba(232,79,79,.15);color:var(--red);}
+  .dpill{display:inline-block;padding:1px 6px;border-radius:20px;font-size:10px;font-family:var(--mono);font-weight:500;}
+  .dpill.up{background:rgba(232,79,79,.15);color:var(--red);}
+  .dpill.dn{background:rgba(45,201,138,.15);color:var(--green);}
+  .bar-wrap{display:flex;flex-direction:column;gap:7px;margin:14px 0;}
+  .bar-row{display:flex;align-items:center;gap:8px;}
+  .bar-label{font-size:11px;color:var(--muted);width:110px;text-align:right;flex-shrink:0;}
+  .bar-track{flex:1;background:var(--surface);border-radius:4px;height:22px;overflow:hidden;}
+  .bar-fill{height:100%;border-radius:4px;display:flex;align-items:center;padding:0 7px;font-family:var(--mono);font-size:10px;color:#fff;font-weight:500;}
+  .bar-val{font-family:var(--mono);font-size:11px;color:var(--text);width:60px;flex-shrink:0;}
+  .hy-split{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;}
+  @media(max-width:540px){.hy-split{grid-template-columns:1fr;}}
+  .hy-card{background:var(--surface);border:1px solid var(--border);border-radius:7px;padding:12px;}
+  .hy-title{font-size:10px;font-weight:700;letter-spacing:.06em;color:var(--muted);text-transform:uppercase;margin-bottom:9px;}
+  .sth{font-size:14px;font-weight:800;margin-bottom:10px;}
+</style>
+</head>
+<body>
+<header>
+  <div class="hbadge">V201401.0032 · ECOenergy Friedrichsdorf GmbH · UR-Nr. 578/2021</div>
+  <h1>Wärmelieferungsrechner</h1>
+  <p>Verifiziert anhand der Jahresabrechnungen 2024 &amp; 2025 · Tarif P-WÄ-GP4-122-0001 / P-WÄ-AP-101-0013</p>
+</header>
+
+<div class="nav-tabs">
+  <button class="nav-tab active" onclick="showTab('calc')">🧮 Rechner</button>
+  <button class="nav-tab" onclick="showTab('v24')">✓ Verify 2024</button>
+  <button class="nav-tab" onclick="showTab('v25')">✓ Verify 2025</button>
+  <button class="nav-tab" onclick="showTab('cmp')">📊 Jahresvergleich</button>
+</div>
+
+<div class="main">
+
+<!-- ══════════ RECHNER ══════════ -->
+<div class="tab-page active" id="tab-calc">
+
+  <div class="card">
+    <div class="card-head"><div class="cnum">1</div><div class="card-title">Grundpreis · P-WÄ-GP4-122-0001</div><div class="card-sub">§ 5 Abs. 2 · 1×/Jahr zum 1. Jan.</div></div>
+    <div class="card-body">
+      <div class="formula">GP = GP₀ × (0,30 + 0,45 × I/I₀ + 0,25 × L/L₀)
+I₀ = 94,4 (EP-Investitionsgüter, Basis 2021=100)
+L₀ = 93,5 (Tarifverdienste Energie, Basis 2020=100)</div>
+      <div class="ibox">GP₀-Staffel (Stand 01.01.2024, Basis 2021=100): bis 10 kW: 253,65 €/a · 11–100 kW: +88,35 €/kW·a · 101–200 kW: +76,95 €/kW·a · &gt;200 kW: +65,55 €/kW·a<br><small>⚠ Ursprünglicher Vertragswert (2017, 445 €/a) wurde durch Indexumstellung auf 2021=100 ersetzt.</small></div>
+      <div class="g2">
+        <div class="field"><label>Anschlussleistung <span>(kW)</span></label><input type="number" id="c_kw" value="7" min="1" step="0.5" oninput="updateGP0()"><div class="hint">Vertrag: 7 kW</div></div>
+        <div class="field"><label>GP₀ netto <span>(auto)</span></label><input type="text" id="c_gp0d" readonly><div class="hint">aus Staffel</div></div>
+      </div>
+      <div class="g2">
+        <div class="field"><label>I · EP-Investitionsgüter <span>(2021=100, Mittelw. Okt–Mrz)</span></label><input type="number" id="c_I" value="114.6" step="0.1"><div class="hint">2024: 114,6 · 2025: 116,8</div></div>
+        <div class="field"><label>L · Tarifverdienste Energie <span>(2020=100, Q1)</span></label><input type="number" id="c_L" value="109.3" step="0.1"><div class="hint">2024: 109,3 · 2025: 115,5</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><div class="cnum">2</div><div class="card-title">Arbeitspreis · P-WÄ-AP-101-0013</div><div class="card-sub">§ 5 Abs. 3 · 2×/Jahr zum 1. Jan. + 1. Jul.</div></div>
+    <div class="card-body">
+      <div class="formula">AP = 78,02 €/MWh × (0,43 × B/B₀ + 0,43 × GG/GG₀ + 0,07 × S/S₀ + 0,07 × SI/SI₀)
+B₀=0,03687 €/kWh · GG₀=89,9 · S₀=0,2097 €/kWh · SI₀=71,4</div>
+      <div class="wbox">⚠ <strong>Wichtige Korrektur vs. Original-Vertrag:</strong> Die Formelgewichte wurden geändert: Statt 0,40 × GI (2010=100) gilt jetzt <strong>0,43 × GG (2021=100)</strong>. Aus beiden Abrechnungen verifiziert. Der GG-Index trägt damit gleich viel wie B.</div>
+      <div class="hy-split">
+        <div class="hy-card">
+          <div class="hy-title">1. Halbjahr (Jan–Jun)</div>
+          <div class="field"><label>B · Erdgas-Beschaffung H1 <span>(€/kWh)</span></label><input type="number" id="c_B1" value="0.04387" step="0.00001"><div class="hint">2024: 0,04387 · 2025: 0,08916</div></div>
+          <div class="field"><label>GG · Erdgas-Index H1 <span>(Nr.635, 2021=100)</span></label><input type="number" id="c_GG1" value="197.8" step="0.1"><div class="hint">2024: 197,8 · 2025: 188,7</div></div>
+          <div class="field"><label>S · Strom-Beschaffung H1 <span>(€/kWh)</span></label><input type="number" id="c_S1" value="0.2182" step="0.0001"><div class="hint">2024: 0,2182 · 2025: 0,2195</div></div>
+          <div class="field"><label>SI · Strom-Index H1 <span>(Nr.617, 2021=100)</span></label><input type="number" id="c_SI1" value="150.4" step="0.1"><div class="hint">2024: 150,4 · 2025: 146,1</div></div>
+        </div>
+        <div class="hy-card">
+          <div class="hy-title">2. Halbjahr (Jul–Dez)</div>
+          <div class="field"><label>B · Erdgas-Beschaffung H2 <span>(€/kWh)</span></label><input type="number" id="c_B2" value="0.04511" step="0.00001"><div class="hint">2024: 0,04511 · 2025: 0,09040</div></div>
+          <div class="field"><label>GG · Erdgas-Index H2 <span>(Nr.635, 2021=100)</span></label><input type="number" id="c_GG2" value="190.5" step="0.1"><div class="hint">2024: 190,5 · 2025: 185,2</div></div>
+          <div class="field"><label>S · Strom-Beschaffung H2 <span>(€/kWh)</span></label><input type="number" id="c_S2" value="0.2182" step="0.0001"><div class="hint">2024: 0,2182 · 2025: 0,2195</div></div>
+          <div class="field"><label>SI · Strom-Index H2 <span>(Nr.617, 2021=100)</span></label><input type="number" id="c_SI2" value="145.2" step="0.1"><div class="hint">2024: 145,2 · 2025: 132,3</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><div class="cnum">3</div><div class="card-title">Verbrauch &amp; MwSt.</div><div class="card-sub">§ 6 Abrechnung</div></div>
+    <div class="card-body">
+      <div class="hy-split">
+        <div class="hy-card">
+          <div class="hy-title">1. Halbjahr</div>
+          <div class="field"><label>Verbrauch H1 <span>(kWh)</span></label><input type="number" id="c_kwh1" value="4587" min="0" step="10"><div class="hint">2024: 4.587 · 2025: 5.707</div></div>
+          <div class="field"><label>MwSt. H1 <span>(%)</span></label><input type="number" id="c_vat1" value="19" min="0" max="30"><div class="hint">2024 Q1: 7% · sonst: 19%</div></div>
+        </div>
+        <div class="hy-card">
+          <div class="hy-title">2. Halbjahr</div>
+          <div class="field"><label>Verbrauch H2 <span>(kWh)</span></label><input type="number" id="c_kwh2" value="3240" min="0" step="10"><div class="hint">2024: 3.240 · 2025: 4.068</div></div>
+          <div class="field"><label>MwSt. H2 <span>(%)</span></label><input type="number" id="c_vat2" value="19" min="0" max="30"><div class="hint">ab Apr. 2024: 19%</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <button class="btn" onclick="calculate()">▶ JAHRESKOSTEN BERECHNEN</button>
+
+  <div id="result" style="display:none">
+    <div class="card">
+      <div class="card-head" style="background:var(--accent)"><div class="card-title" style="font-size:14px">📊 Berechnetes Jahresergebnis</div></div>
+      <div class="card-body">
+        <div class="rrow"><div class="rlabel"><strong>Grundpreis GP</strong><br><span id="r_gpf" style="font-family:var(--mono);font-size:10px;color:var(--muted)">—</span></div><div><div class="rval" id="r_gp">—</div><div class="rval dim" id="r_gpb">—</div></div></div>
+        <div class="rrow"><div class="rlabel"><strong>AP H1</strong><br><span id="r_ap1f" style="font-family:var(--mono);font-size:10px;color:var(--muted)">—</span></div><div><div class="rval" id="r_ap1">—</div></div></div>
+        <div class="rrow"><div class="rlabel"><strong>Arbeitskosten H1</strong> · <span id="r_k1l">—</span> kWh</div><div><div class="rval" id="r_ak1">—</div><div class="rval dim" id="r_ak1b">—</div></div></div>
+        <div class="rrow"><div class="rlabel"><strong>AP H2</strong><br><span id="r_ap2f" style="font-family:var(--mono);font-size:10px;color:var(--muted)">—</span></div><div><div class="rval" id="r_ap2">—</div></div></div>
+        <div class="rrow"><div class="rlabel"><strong>Arbeitskosten H2</strong> · <span id="r_k2l">—</span> kWh</div><div><div class="rval" id="r_ak2">—</div><div class="rval dim" id="r_ak2b">—</div></div></div>
+        <div class="rrow"><div class="rlabel"><strong>Gesamt netto</strong></div><div class="rval" id="r_net">—</div></div>
+        <div class="rrow" style="padding:10px 0"><div class="rlabel" style="font-size:14px"><strong>JAHRESBETRAG BRUTTO</strong></div><div class="rval total" id="r_gross">—</div></div>
+        <div class="rrow"><div class="rlabel">Monatl. Abschlag (1/12 brutto)</div><div class="rval blue" id="r_mo">—</div></div>
+        <div class="rrow"><div class="rlabel">Kosten je kWh gesamt (brutto)</div><div class="rval" id="r_cpk">—</div></div>
+        <div class="rrow"><div class="rlabel">Gesamtverbrauch</div><div class="rval" id="r_twh">—</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ VERIFY 2024 ══════════ -->
+<div class="tab-page" id="tab-v24">
+  <div class="gbox"><strong>Verifikation: Abrechnung 2024 (01.01.2024–31.12.2024)</strong><br>Verbrauch: 7.827 kWh · Zähler 67916806 (0,000 → 7,827 MWh)</div>
+  <div class="card">
+    <div class="card-head"><div class="cnum b">I</div><div class="card-title">Indexwerte 2024</div></div>
+    <div class="card-body">
+      <table class="vtable">
+        <tr><th>Index</th><th>Beschreibung</th><th>Basis I₀</th><th>Wert 2024</th></tr>
+        <tr><td class="lc">I</td><td class="lc">EP-Investitionsgüter FS17/R2 Nr.3 (2021=100)</td><td>94,4</td><td><strong>114,6</strong></td></tr>
+        <tr><td class="lc">L</td><td class="lc">Tarifverd. Energie FS16/R4.3 (2020=100, Q1)</td><td>93,5</td><td><strong>109,3</strong></td></tr>
+        <tr><td class="lc">B H1</td><td class="lc">Erdgas-Beschaffung (€/kWh)</td><td>0,03687</td><td><strong>0,04387</strong></td></tr>
+        <tr><td class="lc">B H2</td><td class="lc">Erdgas-Beschaffung (€/kWh)</td><td>0,03687</td><td><strong>0,04511</strong></td></tr>
+        <tr><td class="lc">GG H1</td><td class="lc">EP-Erdgas Handel/Gewerbe Nr.635 (2021=100)</td><td>89,9</td><td><strong>197,8</strong></td></tr>
+        <tr><td class="lc">GG H2</td><td class="lc">EP-Erdgas Handel/Gewerbe Nr.635 (2021=100)</td><td>89,9</td><td><strong>190,5</strong></td></tr>
+        <tr><td class="lc">S H1/H2</td><td class="lc">Strom-Beschaffung (€/kWh)</td><td>0,2097</td><td><strong>0,2182</strong></td></tr>
+        <tr><td class="lc">SI H1</td><td class="lc">EP-Elektrischer Strom Nr.617 (2021=100)</td><td>71,4</td><td><strong>150,4</strong></td></tr>
+        <tr><td class="lc">SI H2</td><td class="lc">EP-Elektrischer Strom Nr.617 (2021=100)</td><td>71,4</td><td><strong>145,2</strong></td></tr>
+      </table>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-head"><div class="cnum g">✓</div><div class="card-title">Nachrechnung</div></div>
+    <div class="card-body" id="v24body"></div>
+  </div>
+</div>
+
+<!-- ══════════ VERIFY 2025 ══════════ -->
+<div class="tab-page" id="tab-v25">
+  <div class="gbox"><strong>Verifikation: Abrechnung 2025 (01.01.2025–31.12.2025)</strong><br>Verbrauch: 9.775 kWh · Zählerstand 7,827 → 17,602 MWh (+24,9% vs. 2024)</div>
+  <div class="card">
+    <div class="card-head"><div class="cnum b">I</div><div class="card-title">Indexwerte 2025</div></div>
+    <div class="card-body">
+      <table class="vtable">
+        <tr><th>Index</th><th>Beschreibung</th><th>Basis I₀</th><th>Wert 2025</th></tr>
+        <tr><td class="lc">I</td><td class="lc">EP-Investitionsgüter FS17/R2 Nr.3 (2021=100)</td><td>94,4</td><td><strong>116,8</strong></td></tr>
+        <tr><td class="lc">L</td><td class="lc">Tarifverd. Energie FS16/R4.3 (2020=100, Q1)</td><td>93,5</td><td><strong>115,5</strong></td></tr>
+        <tr><td class="lc">B H1</td><td class="lc">Erdgas-Beschaffung (€/kWh)</td><td>0,03687</td><td><strong>0,08916</strong> <span class="dpill up">+103%</span></td></tr>
+        <tr><td class="lc">B H2</td><td class="lc">Erdgas-Beschaffung (€/kWh)</td><td>0,03687</td><td><strong>0,09040</strong> <span class="dpill up">+145%</span></td></tr>
+        <tr><td class="lc">GG H1</td><td class="lc">EP-Erdgas Handel/Gewerbe Nr.635 (2021=100)</td><td>89,9</td><td><strong>188,7</strong></td></tr>
+        <tr><td class="lc">GG H2</td><td class="lc">EP-Erdgas Handel/Gewerbe Nr.635 (2021=100)</td><td>89,9</td><td><strong>185,2</strong></td></tr>
+        <tr><td class="lc">S H1/H2</td><td class="lc">Strom-Beschaffung (€/kWh)</td><td>0,2097</td><td><strong>0,2195</strong></td></tr>
+        <tr><td class="lc">SI H1</td><td class="lc">EP-Elektrischer Strom Nr.617 (2021=100)</td><td>71,4</td><td><strong>146,1</strong></td></tr>
+        <tr><td class="lc">SI H2</td><td class="lc">EP-Elektrischer Strom Nr.617 (2021=100)</td><td>71,4</td><td><strong>132,3</strong></td></tr>
+      </table>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-head"><div class="cnum g">✓</div><div class="card-title">Nachrechnung</div></div>
+    <div class="card-body" id="v25body"></div>
+  </div>
+</div>
+
+<!-- ══════════ VERGLEICH ══════════ -->
+<div class="tab-page" id="tab-cmp">
+  <div class="card">
+    <div class="card-head"><div class="cnum y">📈</div><div class="card-title">Jahresvergleich 2024 → 2025</div></div>
+    <div class="card-body">
+      <table class="vtable">
+        <tr><th>Position</th><th>2024</th><th>2025</th><th>Differenz</th></tr>
+        <tr><td class="lc">Verbrauch gesamt</td><td>7.827 kWh</td><td>9.775 kWh</td><td class="td-red">+1.948 kWh &nbsp;<span class="dpill up">+24,9%</span></td></tr>
+        <tr><td class="lc sub">· H1 (Jan–Jun)</td><td>4.587 kWh</td><td>5.707 kWh</td><td class="td-red">+1.120 kWh</td></tr>
+        <tr><td class="lc sub">· H2 (Jul–Dez)</td><td>3.240 kWh</td><td>4.068 kWh</td><td class="td-red">+828 kWh</td></tr>
+        <tr><td colspan="4" style="padding:0"><div class="divider" style="margin:3px 0"></div></td></tr>
+        <tr><td class="lc">Grundpreis (netto)</td><td>288,79 €/a</td><td>295,66 €/a</td><td class="td-red">+6,87 € &nbsp;<span class="dpill up">+2,4%</span></td></tr>
+        <tr><td class="lc sub">· I (Investitionsgüter)</td><td>114,6</td><td>116,8</td><td class="td-red">+2,2</td></tr>
+        <tr><td class="lc sub">· L (Tarifverdienste)</td><td>109,3</td><td>115,5</td><td class="td-red">+6,2</td></tr>
+        <tr><td colspan="4" style="padding:0"><div class="divider" style="margin:3px 0"></div></td></tr>
+        <tr><td class="lc">Arbeitspreis H1 (€/MWh netto)</td><td>130,919</td><td>168,438</td><td class="td-red">+37,52 &nbsp;<span class="dpill up">+28,7%</span></td></tr>
+        <tr><td class="lc">Arbeitspreis H2 (€/MWh netto)</td><td>128,926</td><td>167,205</td><td class="td-red">+38,28 &nbsp;<span class="dpill up">+29,7%</span></td></tr>
+        <tr><td class="lc sub">· B Erdgas-Beschaffung H1</td><td>0,04387 €/kWh</td><td>0,08916 €/kWh</td><td class="td-red"><span class="dpill up">+103% ‼</span></td></tr>
+        <tr><td class="lc sub">· B Erdgas-Beschaffung H2</td><td>0,04511 €/kWh</td><td>0,09040 €/kWh</td><td class="td-red"><span class="dpill up">+100% ‼</span></td></tr>
+        <tr><td colspan="4" style="padding:0"><div class="divider" style="margin:3px 0"></div></td></tr>
+        <tr><td class="lc">CO₂-Abgabe BEHG (€/t, informatorisch)</td><td>45 €/t</td><td>55 €/t</td><td class="td-red">+10 €/t &nbsp;<span class="dpill up">+22%</span></td></tr>
+        <tr><td class="lc">MwSt.-Situation</td><td>Q1: 7% / Q2–Q4: 19%</td><td>Alles 19%</td><td class="td-yel">Vorteil 2024 entfällt</td></tr>
+        <tr><td colspan="4" style="padding:0"><div class="divider" style="margin:3px 0"></div></td></tr>
+        <tr class="tr"><td class="lc">Rechnungsbetrag BRUTTO</td><td>1.491,08 €</td><td>2.305,18 €</td><td class="td-red">+814,10 € &nbsp;<span class="dpill up">+54,6%</span></td></tr>
+        <tr><td class="lc">Geleistete Abschläge</td><td>—</td><td>−1.488,00 €</td><td>12 × 124 €/Mo</td></tr>
+        <tr><td class="lc">Nachzahlung</td><td>1.491,08 €*</td><td style="color:var(--red);font-weight:700">817,18 €</td><td></td></tr>
+        <tr><td class="lc">Neuer Abschlag ab Folgeabrechnung</td><td>386,00 €/Mo</td><td>214,00 €/Mo</td><td></td></tr>
+      </table>
+      <p style="font-size:11px;color:var(--muted);margin-top:6px">* 2024 war das erste Abrechnungsjahr, kein Abschlag für diesen Zeitraum.</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><div class="cnum">🔍</div><div class="card-title">Woher kommen die +814 € Mehrkosten?</div><div class="card-sub">vollständige Attributierung</div></div>
+    <div class="card-body">
+      <div class="wbox"><strong>Kurzantwort:</strong> Die Erdgas-Beschaffungskosten bei ECOenergy haben sich im Vergleich 2024→2025 mehr als verdoppelt (B: ~0,044 → ~0,090 €/kWh). Das treibt rund <strong>54%</strong> der Mehrkosten. Dazu kommt ein um 24,9% höherer Verbrauch. Der MwSt.-Sondereffekt (Q1-2024 war noch 7%) machte 2024 zusätzlich günstiger.</div>
+      <div class="sth">Effekt-Zerlegung (brutto)</div>
+      <div class="bar-wrap">
+        <div class="bar-row"><div class="bar-label">① AP-Steigerung</div><div class="bar-track"><div class="bar-fill" style="width:54%;background:#e84f4f">+440 €</div></div><div class="bar-val" style="color:var(--red)">54%</div></div>
+        <div class="bar-row"><div class="bar-label">② Mehrverbrauch</div><div class="bar-track"><div class="bar-fill" style="width:37%;background:#f5a623">+302 €</div></div><div class="bar-val" style="color:var(--accent2)">37%</div></div>
+        <div class="bar-row"><div class="bar-label">③ MwSt.-Effekt</div><div class="bar-track"><div class="bar-fill" style="width:8%;background:#f5c842">+64 €</div></div><div class="bar-val" style="color:var(--yellow)">8%</div></div>
+        <div class="bar-row"><div class="bar-label">④ GP-Steigerung</div><div class="bar-track"><div class="bar-fill" style="width:1%;background:#4fa8ea">+8 €</div></div><div class="bar-val" style="color:var(--blue)">1%</div></div>
+      </div>
+      <div class="divider"></div>
+      <div class="sth">Detailrechnung</div>
+      <table class="vtable">
+        <tr><th>Effekt</th><th>Formel</th><th style="text-align:right">Betrag brutto</th></tr>
+        <tr><td class="lc">① Arbeitspreis-Steigerung</td><td class="lc" style="font-size:11px">Ø-AP +37,9 €/MWh × 9.775 kWh × 1,19</td><td style="text-align:right;color:var(--red);font-weight:700">+440 €</td></tr>
+        <tr><td class="lc sub">Treiber: Erdgas-Beschaffung ECOenergy</td><td class="lc sub">B: 0,044→0,090 €/kWh (+100%) → AP-Δ ca. +87 €/MWh</td><td style="text-align:right;color:var(--muted)">dominierend</td></tr>
+        <tr><td class="lc sub">Gegenläufig: Erdgas-Index leicht gesunken</td><td class="lc sub">GG H1: 197,8→188,7; GG H2: 190,5→185,2</td><td style="text-align:right;color:var(--green)">dämpfend</td></tr>
+        <tr><td class="lc">② Mehrverbrauch (+24,9%)</td><td class="lc" style="font-size:11px">+1.948 kWh × Ø AP2024 (130,1 €/MWh) × 1,19</td><td style="text-align:right;color:var(--red);font-weight:700">+302 €</td></tr>
+        <tr><td class="lc sub">Mögliche Ursachen</td><td class="lc sub">Kälterer Winter 2025 · ggf. mehr Warmwasser · Lüftungsverhalten</td><td></td></tr>
+        <tr><td class="lc">③ MwSt.-Normalisierung</td><td class="lc" style="font-size:11px">535,78 € netto Q1-2024 × (19%−7%) = 64 € Ersparnis entfällt</td><td style="text-align:right;color:var(--yellow);font-weight:700">+64 €</td></tr>
+        <tr><td class="lc sub">Hintergrund</td><td class="lc sub">Temporäre 7%-MwSt. auf Erdgaswärme galt Jan–Mrz 2024. Ab April 2024 wieder 19%</td><td></td></tr>
+        <tr><td class="lc">④ Grundpreis-Steigerung</td><td class="lc" style="font-size:11px">(295,66 − 288,79) × 1,19 = 8,18 €</td><td style="text-align:right;color:var(--blue);font-weight:700">+8 €</td></tr>
+        <tr class="tr"><td class="lc">GESAMT</td><td class="lc">①+②+③+④</td><td style="text-align:right;font-weight:700">≈ +814 €</td></tr>
+      </table>
+      <div class="divider"></div>
+      <div class="sth">Zur Nachzahlung von 817 €</div>
+      <div class="ibox">
+        <strong>Warum wurde nicht mehr gezahlt?</strong> Die Abrechnung 2024 kam erst am 07.08.2025 an. Bis dahin liefen monatliche Abschläge von 124 €/Monat weiter (12 × 124 = 1.488 €). Der neue Abschlag von 386 €/Monat (festgesetzt in der 2024er-Rechnung) wurde offenbar nicht für das komplette Jahr 2025 eingezogen – möglicherweise weil das SEPA-Mandat noch nicht eingerichtet war oder die Lastschriften erst ab September 2025 hätten laufen sollen.<br><br>
+        Ergebnis: Jahresrechnung 2025 (2.305,18 €) minus geleistete Abschläge (1.488,00 €) = <strong>Nachzahlung 817,18 €</strong><br><br>
+        <strong>Neuer Abschlag ab April 2026: 214 €/Monat</strong> (brutto) = 2.568 €/Jahr. Das liegt knapp über der 2025er Rechnung (2.305 €) als kleiner Puffer für Preissteigerungen.
+      </div>
+    </div>
+  </div>
+</div>
+
+</div><!-- main -->
+
+<script>
+// ── KONSTANTEN (aus Abrechnungen verifiziert) ──────────────
+const GP0_10=253.65, GP0_90=88.35, GP0_100=76.95, GP0_rest=65.55;
+const I0=94.4, L0=93.5;
+const AP0=78.02, B0=0.03687, GG0=89.9, S0=0.2097, SI0=71.4;
+
+function gp0(kw){
+  if(kw<=10) return GP0_10;
+  if(kw<=100) return GP0_10+(kw-10)*GP0_90;
+  if(kw<=200) return GP0_10+90*GP0_90+(kw-100)*GP0_100;
+  return GP0_10+90*GP0_90+100*GP0_100+(kw-200)*GP0_rest;
+}
+function calcAP(B,GG,S,SI){
+  return AP0*(0.43*(B/B0)+0.43*(GG/GG0)+0.07*(S/S0)+0.07*(SI/SI0));
+}
+function updateGP0(){
+  const kw=parseFloat(document.getElementById('c_kw').value)||7;
+  document.getElementById('c_gp0d').value=fmt(gp0(kw))+' €/a';
+}
+updateGP0();
+
+function showTab(id){
+  document.querySelectorAll('.tab-page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(b=>b.classList.remove('active'));
+  document.getElementById('tab-'+id).classList.add('active');
+  const idx=['calc','v24','v25','cmp'].indexOf(id);
+  document.querySelectorAll('.nav-tab')[idx].classList.add('active');
+  if(id==='v24') buildV24();
+  if(id==='v25') buildV25();
+}
+
+function calculate(){
+  const kw=parseFloat(document.getElementById('c_kw').value)||7;
+  const I=parseFloat(document.getElementById('c_I').value)||114.6;
+  const L=parseFloat(document.getElementById('c_L').value)||109.3;
+  const B1=parseFloat(document.getElementById('c_B1').value)||0.04387;
+  const GG1=parseFloat(document.getElementById('c_GG1').value)||197.8;
+  const S1=parseFloat(document.getElementById('c_S1').value)||0.2182;
+  const SI1=parseFloat(document.getElementById('c_SI1').value)||150.4;
+  const B2=parseFloat(document.getElementById('c_B2').value)||0.04511;
+  const GG2=parseFloat(document.getElementById('c_GG2').value)||190.5;
+  const S2=parseFloat(document.getElementById('c_S2').value)||0.2182;
+  const SI2=parseFloat(document.getElementById('c_SI2').value)||145.2;
+  const kwh1=parseFloat(document.getElementById('c_kwh1').value)||0;
+  const kwh2=parseFloat(document.getElementById('c_kwh2').value)||0;
+  const vat1=(parseFloat(document.getElementById('c_vat1').value)||19)/100;
+  const vat2=(parseFloat(document.getElementById('c_vat2').value)||19)/100;
+
+  const GP0v=gp0(kw);
+  const gpF=0.30+0.45*(I/I0)+0.25*(L/L0);
+  const GP=GP0v*gpF;
+  const ap1=calcAP(B1,GG1,S1,SI1);
+  const ap2=calcAP(B2,GG2,S2,SI2);
+  const ak1=(kwh1/1000)*ap1;
+  const ak2=(kwh2/1000)*ap2;
+  const tkwh=kwh1+kwh2;
+  const gp1=tkwh>0?GP*(kwh1/tkwh):GP/2;
+  const gp2=GP-gp1;
+  const n1=gp1+ak1, n2=gp2+ak2;
+  const g1=n1*(1+vat1), g2=n2*(1+vat2);
+  const tn=n1+n2, tg=g1+g2;
+
+  s('r_gp', fmt(GP)+' €/a netto');
+  s('r_gpb', fmt(GP*(1+Math.max(vat1,vat2)))+' €/a brutto');
+  s('r_gpf', `GP₀ ${fmt(GP0v)} × (0,30 + 0,45×${fN(I/I0,4)} + 0,25×${fN(L/L0,4)}) = Faktor ${fN(gpF,4)}`);
+  s('r_ap1', fN(ap1,5)+' €/MWh netto');
+  s('r_ap1f', `78,02×(0,43×${fN(B1/B0,3)}+0,43×${fN(GG1/GG0,3)}+0,07×${fN(S1/S0,3)}+0,07×${fN(SI1/SI0,3)})`);
+  s('r_k1l', (kwh1/1000).toFixed(3));
+  s('r_ak1', fmt(ak1)+' € netto');
+  s('r_ak1b', fmt(ak1*(1+vat1))+' € brutto');
+  s('r_ap2', fN(ap2,5)+' €/MWh netto');
+  s('r_ap2f', `78,02×(0,43×${fN(B2/B0,3)}+0,43×${fN(GG2/GG0,3)}+0,07×${fN(S2/S0,3)}+0,07×${fN(SI2/SI0,3)})`);
+  s('r_k2l', (kwh2/1000).toFixed(3));
+  s('r_ak2', fmt(ak2)+' € netto');
+  s('r_ak2b', fmt(ak2*(1+vat2))+' € brutto');
+  s('r_net', fmt(tn)+' €');
+  document.getElementById('r_gross').textContent=fmt(tg)+' €';
+  s('r_mo', fmt(tg/12)+' €/Monat');
+  s('r_cpk', tkwh>0?fN(tg/tkwh*100,4)+' ct/kWh':'—');
+  s('r_twh', (tkwh/1000).toFixed(3)+' MWh ('+Math.round(tkwh).toLocaleString('de-DE')+' kWh)');
+  document.getElementById('result').style.display='';
+  document.getElementById('result').scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+
+function vbadge(ok){ return `<span class="vbadge ${ok?'ok':'err'}">${ok?'✓':'✗'}</span>`; }
+function near(a,b,tol=0.15){ return Math.abs(a-b)<tol; }
+
+function buildV24(){
+  const GP0v=gp0(7);
+  const gpF=0.30+0.45*(114.6/I0)+0.25*(109.3/L0);
+  const GP=GP0v*gpF;
+  const ap1=calcAP(0.04387,197.8,0.2182,150.4);
+  const ap2=calcAP(0.04511,190.5,0.2182,145.2);
+  // GP tagesanteilig: Q1=91 Tage, Q2Q4=275 Tage (gesamt 366)
+  const gp_q1=GP/366*91, gp_q2q4=GP/366*275;
+  // Verbrauch (MWh)
+  const q1=3.544, q2=1.043, h2=3.240;
+  const ak_q1=q1*ap1, ak_q2=q2*ap1, ak_h2=h2*ap2;
+  const n7=gp_q1+ak_q1;         // 7% MwSt
+  const n19=gp_q2q4+ak_q2+ak_h2; // 19% MwSt
+  const tn=n7+n19;
+  const g7=n7*1.07, g19=n19*1.19, tg=g7+g19;
+
+  document.getElementById('v24body').innerHTML=`
+  <div class="formula">GP = ${fmt(GP0v)} × (0,30 + 0,45×${fN(114.6/I0,4)} + 0,25×${fN(109.3/L0,4)}) = ${fmt(GP0v)} × ${fN(gpF,5)} = <strong>${fmt(GP)} €/a</strong> (Abrechnung: 288,79 €/a) ${vbadge(near(GP,288.79,0.05))}</div>
+  <table class="vtable">
+    <tr><th>Preistyp</th><th>Zeitraum</th><th>Einzelpreis</th><th>Menge</th><th>Netto calc.</th><th>Abrechnung</th><th></th></tr>
+    <tr><td class="lc">Grundpreis</td><td>01.01–31.03.24</td><td>${fmt(GP)} €/a</td><td>91 Tage</td><td>${fmt(gp_q1)} €</td><td>71,80 €</td><td>${vbadge(near(gp_q1,71.80))}</td></tr>
+    <tr><td class="lc">Grundpreis</td><td>01.04–31.12.24</td><td>${fmt(GP)} €/a</td><td>275 Tage</td><td>${fmt(gp_q2q4)} €</td><td>216,99 €</td><td>${vbadge(near(gp_q2q4,216.99))}</td></tr>
+    <tr><td class="lc">AP H1 = ${fN(ap1,5)} €/MWh</td><td>01.01–31.03.24</td><td>${fN(ap1,5)} €/MWh</td><td>3,544 MWh</td><td>${fmt(ak_q1)} €</td><td>463,98 €</td><td>${vbadge(near(ak_q1,463.98))}</td></tr>
+    <tr><td class="lc">AP H1 (gleicher Wert)</td><td>01.04–30.06.24</td><td>${fN(ap1,5)} €/MWh</td><td>1,043 MWh</td><td>${fmt(ak_q2)} €</td><td>136,55 €</td><td>${vbadge(near(ak_q2,136.55))}</td></tr>
+    <tr><td class="lc">AP H2 = ${fN(ap2,5)} €/MWh</td><td>01.07–31.12.24</td><td>${fN(ap2,5)} €/MWh</td><td>3,240 MWh</td><td>${fmt(ak_h2)} €</td><td>417,72 €</td><td>${vbadge(near(ak_h2,417.72))}</td></tr>
+    <tr class="tr"><td class="lc" colspan="4">Gesamt netto</td><td>${fmt(tn)} €</td><td>1.307,04 €</td><td>${vbadge(near(tn,1307.04,0.25))}</td></tr>
+  </table>
+  <div class="divider"></div>
+  <table class="vtable">
+    <tr><th>MwSt.</th><th>Netto-Basis</th><th>Satz</th><th>MwSt-Betrag</th><th>Brutto calc.</th><th>Abrechnung</th><th></th></tr>
+    <tr><td class="lc">Jan–Mrz 2024 (Q1)</td><td>${fmt(n7)} €</td><td>7%</td><td>${fmt(n7*0.07)} €</td><td>${fmt(g7)} €</td><td>573,28 €</td><td>${vbadge(near(g7,573.28,0.25))}</td></tr>
+    <tr><td class="lc">Apr–Dez 2024 (Q2–Q4)</td><td>${fmt(n19)} €</td><td>19%</td><td>${fmt(n19*0.19)} €</td><td>${fmt(g19)} €</td><td>917,80 €</td><td>${vbadge(near(g19,917.80,0.25))}</td></tr>
+    <tr class="tr"><td class="lc" colspan="4">Restbetrag gesamt</td><td><strong>${fmt(tg)} €</strong></td><td><strong>1.491,08 €</strong></td><td>${vbadge(near(tg,1491.08,0.30))}</td></tr>
+  </table>`;
+}
+
+function buildV25(){
+  const GP0v=gp0(7);
+  const gpF=0.30+0.45*(116.8/I0)+0.25*(115.5/L0);
+  const GP=GP0v*gpF;
+  const ap1=calcAP(0.08916,188.7,0.2195,146.1);
+  const ap2=calcAP(0.09040,185.2,0.2195,132.3);
+  const h1=5.707, h2=4.068;
+  const ak1=h1*ap1, ak2=h2*ap2;
+  const tn=GP+ak1+ak2, tg=tn*1.19, rest=tg-1488;
+
+  document.getElementById('v25body').innerHTML=`
+  <div class="formula">GP = ${fmt(GP0v)} × (0,30 + 0,45×${fN(116.8/I0,4)} + 0,25×${fN(115.5/L0,4)}) = ${fmt(GP0v)} × ${fN(gpF,5)} = <strong>${fmt(GP)} €/a</strong> (Abrechnung: 295,66 €/a) ${vbadge(near(GP,295.66,0.05))}</div>
+  <table class="vtable">
+    <tr><th>Preistyp</th><th>Zeitraum</th><th>Einzelpreis</th><th>Menge</th><th>Netto calc.</th><th>Abrechnung</th><th></th></tr>
+    <tr><td class="lc">Grundpreis</td><td>01.01–31.12.25</td><td>${fmt(GP)} €/a</td><td>1 Jahr</td><td>${fmt(GP)} €</td><td>295,66 €</td><td>${vbadge(near(GP,295.66,0.05))}</td></tr>
+    <tr><td class="lc">AP H1 = ${fN(ap1,5)} €/MWh</td><td>01.01–30.06.25</td><td>${fN(ap1,5)} €/MWh</td><td>5,707 MWh</td><td>${fmt(ak1)} €</td><td>961,28 €</td><td>${vbadge(near(ak1,961.28))}</td></tr>
+    <tr><td class="lc">AP H2 = ${fN(ap2,5)} €/MWh</td><td>01.07–31.12.25</td><td>${fN(ap2,5)} €/MWh</td><td>4,068 MWh</td><td>${fmt(ak2)} €</td><td>680,19 €</td><td>${vbadge(near(ak2,680.19))}</td></tr>
+    <tr class="tr"><td class="lc" colspan="4">Gesamt netto</td><td>${fmt(tn)} €</td><td>1.937,13 €</td><td>${vbadge(near(tn,1937.13,0.25))}</td></tr>
+  </table>
+  <div class="divider"></div>
+  <table class="vtable">
+    <tr><th>MwSt.</th><th>Netto</th><th>Satz</th><th>MwSt-Betrag</th><th>Brutto calc.</th><th>Abrechnung</th><th></th></tr>
+    <tr><td class="lc">2025 (ganzjährig)</td><td>${fmt(tn)} €</td><td>19%</td><td>${fmt(tn*0.19)} €</td><td>${fmt(tg)} €</td><td>2.305,18 €</td><td>${vbadge(near(tg,2305.18,0.30))}</td></tr>
+    <tr><td class="lc">Geleistete Abschläge</td><td colspan="3" style="color:var(--muted)">12 × 124 €/Monat</td><td style="color:var(--red)">−1.488,00 €</td><td style="color:var(--red)">−1.488,00 €</td><td>${vbadge(true)}</td></tr>
+    <tr class="tr"><td class="lc" colspan="4">Restbetrag (Nachzahlung)</td><td style="color:var(--red);font-weight:700">${fmt(rest)} €</td><td style="color:var(--red);font-weight:700">817,18 €</td><td>${vbadge(near(rest,817.18,0.30))}</td></tr>
+  </table>`;
+}
+
+function s(id,v){const e=document.getElementById(id);if(e)e.textContent=v;}
+function fmt(n){return n.toLocaleString('de-DE',{minimumFractionDigits:2,maximumFractionDigits:2});}
+function fN(n,d){return n.toLocaleString('de-DE',{minimumFractionDigits:d,maximumFractionDigits:d});}
+</script>
+</body>
+</html>
