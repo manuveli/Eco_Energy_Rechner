@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wärmelieferungsrechner – ECOenergy Friedrichsdorf</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700;800&display=swap');
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg:#0d1017; --surface:#151922; --card:#1a1f2e; --border:#252d40;
+    --accent:#e8660a; --accent2:#f5a623; --text:#e4e8f2; --muted:#6a7490;
+    --green:#2dc98a; --blue:#4fa8ea; --red:#e84f4f; --yellow:#f5c842;
+    --col-index:#4fa8ea; --col-eco:#e8a20a; --col-user:#2dc98a; --col-auto:#9b7ee8;
+    --mono:'DM Mono',monospace; --sans:'Syne',sans-serif;
+  }
+  body { font-family:var(--sans); background:var(--bg); color:var(--text); min-height:100vh; padding:22px 16px 80px; line-height:1.5; }
+  header { max-width:860px; margin:0 auto 18px; padding-bottom:14px; border-bottom:1px solid var(--border); }
+  .hbadge { font-family:var(--mono); font-size:11px; letter-spacing:.13em; color:var(--accent); margin-bottom:6px; }
+  header h1 { font-size:21px; font-weight:800; margin-bottom:3px; }
+  header p { color:var(--muted); font-size:12px; }
+
+  /* LEGEND */
+  .legend { max-width:860px; margin:0 auto 16px; display:flex; gap:7px; flex-wrap:wrap; }
+  .leg { display:flex; align-items:center; gap:5px; padding:4px 10px; border-radius:20px; font-size:11px; font-weight:700; font-family:var(--mono); border:1px solid; }
+  .leg-dot { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
+  .leg.i { border-color:rgba(79,168,234,.3); background:rgba(79,168,234,.08); color:var(--col-index); }
+  .leg.e { border-color:rgba(232,162,10,.3);  background:rgba(232,162,10,.08); color:var(--col-eco); }
+  .leg.u { border-color:rgba(45,201,138,.3);  background:rgba(45,201,138,.08); color:var(--col-user); }
+  .leg.a { border-color:rgba(155,126,232,.3); background:rgba(155,126,232,.08); color:var(--col-auto); }
+
+  /* PREFILL BAR */
+  .prefill-bar { max-width:860px; margin:0 auto 16px; background:var(--card); border:1px solid var(--border); border-radius:9px; padding:12px 16px; display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+  .prefill-label { font-size:12px; color:var(--muted); font-weight:700; flex-shrink:0; }
+  .pbtn { background:var(--surface); border:1px solid var(--border); border-radius:6px; color:var(--text); font-family:var(--mono); font-size:12px; padding:6px 14px; cursor:pointer; transition:all .15s; }
+  .pbtn:hover { border-color:var(--accent); color:var(--accent); }
+  .pbtn.active { background:rgba(232,102,10,.15); border-color:var(--accent); color:var(--accent); }
+
+  /* INPUT ERROR BANNER */
+  .err-banner { display:none; max-width:860px; margin:0 auto 12px; background:rgba(232,79,79,.1); border:1px solid rgba(232,79,79,.3); border-radius:8px; padding:10px 14px; font-size:12px; color:#f0a0a0; line-height:1.5; }
+
+  /* MAIN */
+  .main { max-width:860px; margin:0 auto; }
+  .g2 { display:grid; grid-template-columns:1fr 1fr; gap:11px; }
+  @media(max-width:560px){.g2{grid-template-columns:1fr;}}
+  .card { background:var(--card); border:1px solid var(--border); border-radius:10px; margin-bottom:11px; overflow:hidden; }
+  .card-head { display:flex; align-items:center; gap:9px; padding:11px 15px; border-bottom:1px solid var(--border); }
+  .cnum { width:21px;height:21px;border-radius:50%;background:var(--accent);color:#fff;font-family:var(--mono);font-size:11px;font-weight:500;display:flex;align-items:center;justify-content:center;flex-shrink:0; }
+  .card-title { font-size:13px; font-weight:700; flex:1; }
+  .card-sub { font-family:var(--mono); font-size:10px; color:var(--muted); }
+  .card-body { padding:15px; }
+
+  /* FIELD */
+  .field { margin-bottom:11px; }
+  .field:last-child { margin-bottom:0; }
+  .field label { display:flex; align-items:center; gap:5px; font-size:10px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; margin-bottom:4px; }
+  .field label .ld { width:6px;height:6px;border-radius:50%;flex-shrink:0; }
+  .field label .ln { color:var(--muted); }
+  .field label .ls { font-family:var(--mono);font-weight:400;text-transform:none;letter-spacing:0;font-size:10px;color:var(--muted);opacity:.65; }
+
+  .f-i label .ld { background:var(--col-index); } .f-i label .ln { color:var(--col-index); }
+  .f-e label .ld { background:var(--col-eco); }   .f-e label .ln { color:var(--col-eco); }
+  .f-u label .ld { background:var(--col-user); }  .f-u label .ln { color:var(--col-user); }
+  .f-a label .ld { background:var(--col-auto); }  .f-a label .ln { color:var(--col-auto); }
+
+  /* inputs */
+  .inp-wrap { position:relative; }
+  .inp-unit { position:absolute; right:10px; top:50%; transform:translateY(-50%); font-family:var(--mono); font-size:11px; color:var(--muted); pointer-events:none; }
+  input[type="text"] {
+    width:100%; background:var(--surface); border:1px solid var(--border); border-radius:6px;
+    color:var(--text); font-family:var(--mono); font-size:14px; padding:8px 11px; outline:none;
+    transition:border-color .15s;
+  }
+  input.has-unit { padding-right:44px; }
+  input:focus { border-color:var(--accent); }
+  input[readonly] { color:var(--col-auto); background:rgba(155,126,232,.04); cursor:default; }
+  input.inp-warn { border-color:var(--red) !important; background:rgba(232,79,79,.05); }
+
+  .f-i input:not([readonly]) { border-color:rgba(79,168,234,.22); }
+  .f-i input:focus             { border-color:var(--col-index); }
+  .f-e input:not([readonly]) { border-color:rgba(232,162,10,.22); }
+  .f-e input:focus             { border-color:var(--col-eco); }
+  .f-u input:not([readonly]) { border-color:rgba(45,201,138,.22); }
+  .f-u input:focus             { border-color:var(--col-user); }
+
+  .hint { margin-top:3px; font-size:11px; color:var(--muted); line-height:1.4; display:flex; align-items:flex-start; gap:4px; flex-wrap:wrap; }
+  .hint a { color:var(--col-index); text-decoration:none; border-bottom:1px dotted rgba(79,168,234,.35); }
+  .hint a:hover { border-bottom-color:var(--col-index); }
+  .src-tag { font-size:10px; white-space:nowrap; }
+  .inv-ref { font-size:10px; color:rgba(45,201,138,.7); font-family:var(--mono); white-space:nowrap; }
+
+  .formula { background:var(--surface); border:1px solid var(--border); border-left:3px solid var(--accent); border-radius:6px; padding:9px 12px; margin-bottom:11px; font-family:var(--mono); font-size:11px; color:var(--accent2); line-height:1.8; white-space:pre-wrap; }
+  .wbox { background:rgba(232,102,10,.07); border:1px solid rgba(232,102,10,.2); border-radius:6px; padding:9px 12px; margin-bottom:11px; font-size:11px; color:#f0aa70; line-height:1.55; }
+  .ibox { background:rgba(79,168,234,.06); border:1px solid rgba(79,168,234,.15); border-radius:6px; padding:9px 12px; margin-bottom:11px; font-size:11px; color:#9dc8ea; line-height:1.55; }
+  .divider { border-top:1px solid var(--border); margin:11px 0; }
+
+  /* HY */
+  .hy { display:grid; grid-template-columns:1fr 1fr; gap:11px; }
+  @media(max-width:520px){.hy{grid-template-columns:1fr;}}
+  .hy-card { background:var(--surface); border:1px solid var(--border); border-radius:7px; padding:12px; }
+  .hy-title { font-size:10px; font-weight:700; letter-spacing:.06em; color:var(--muted); text-transform:uppercase; margin-bottom:8px; border-bottom:1px solid var(--border); padding-bottom:5px; }
+
+  /* BUTTON */
+  .btn { width:100%; background:var(--accent); color:#fff; border:none; border-radius:8px; padding:14px; font-family:var(--sans); font-size:14px; font-weight:700; letter-spacing:.04em; cursor:pointer; transition:background .15s; margin-bottom:11px; }
+  .btn:hover { background:#d4590a; }
+
+  /* RESULT */
+  .rcard { background:var(--card); border:1px solid var(--border); border-radius:10px; margin-bottom:11px; overflow:hidden; }
+  .rcard-head { padding:10px 15px; font-size:13px; font-weight:700; }
+  .rcard-body { padding:13px 15px; }
+  .rrow { display:flex; justify-content:space-between; align-items:baseline; padding:7px 0; border-bottom:1px solid var(--border); gap:10px; }
+  .rrow:last-child { border-bottom:none; }
+  .rlabel { font-size:12px; color:var(--muted); flex:1; line-height:1.4; }
+  .rlabel strong { color:var(--text); }
+  .rval { font-family:var(--mono); font-size:13px; color:var(--green); text-align:right; white-space:nowrap; }
+  .rval.total { font-size:20px; color:var(--accent2); }
+  .rval.dim { color:var(--muted); font-size:11px; }
+  .rval.blue { color:var(--blue); }
+  .rval.chk { font-size:12px; }
+  .fdetail { font-family:var(--mono); font-size:10px; color:var(--muted); margin-top:2px; line-height:1.4; }
+
+  /* CHECK BADGE */
+  .chk-ok  { color:var(--green); font-family:var(--mono); font-size:11px; }
+  .chk-err { color:var(--red);   font-family:var(--mono); font-size:11px; }
+
+  /* REQUIRED FIELD */
+  .req-badge { display:inline-flex; align-items:center; gap:3px; padding:1px 7px; border-radius:10px; font-size:10px; font-weight:700; font-family:var(--mono); background:rgba(232,79,79,.15); color:var(--red); border:1px solid rgba(232,79,79,.3); margin-left:4px; }
+  .f-req label .ln { color:var(--col-user); }
+  .f-req label .ld { background:var(--col-user); }
+  .f-req input:not([readonly]) { border-color:rgba(45,201,138,.4) !important; border-width:2px; }
+  .f-req input:focus { border-color:var(--col-user) !important; box-shadow:0 0 0 2px rgba(45,201,138,.12); }
+  .req-note { font-size:11px; color:var(--red); font-weight:700; font-family:var(--mono); }
+
+  /* TOAST */
+  .toast { position:fixed; bottom:24px; right:24px; background:#1e2d1e; border:1px solid var(--green); border-radius:8px; padding:10px 16px; font-size:12px; color:var(--green); font-family:var(--mono); opacity:0; transition:opacity .3s; pointer-events:none; z-index:999; }
+  .toast.show { opacity:1; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="hbadge">ECOenergy Friedrichsdorf GmbH · Tarife P-WÄ-GP4-122-0001 / P-WÄ-AP-101-0013 · §5 Abs. 2+3</div>
+  <h1>Wärmekosten-Rechner <span style="font-size:13px;font-weight:400;color:var(--muted);letter-spacing:.02em">V 1.0</span></h1>
+  <p>Für alle Häuser der Ökosiedlung Friedrichsdorf mit Wärmelieferungsvertrag ECOenergy · Einzeljahr-Berechnung</p>
+</header>
+
+<!-- LEGENDE -->
+<div class="legend">
+  <div class="leg i"><div class="leg-dot" style="background:var(--col-index)"></div>Öffentlicher Destatis-Index</div>
+  <div class="leg e"><div class="leg-dot" style="background:var(--col-eco)"></div>ECOenergy intern (aus Abrechnung)</div>
+  <div class="leg u"><div class="leg-dot" style="background:var(--col-user)"></div>Eigene Eingabe</div>
+  <div class="leg a"><div class="leg-dot" style="background:var(--col-auto)"></div>Automatisch berechnet</div>
+</div>
+
+<!-- ANLEITUNG -->
+<div style="max-width:860px;margin:0 auto 16px;background:var(--card);border:1px solid var(--border);border-radius:9px;padding:14px 18px;font-size:12px;color:var(--muted);line-height:1.7">
+  <strong style="color:var(--text);font-size:13px">So benutzt du diesen Rechner:</strong><br>
+  <strong style="color:var(--col-index)">1.</strong> Klicke auf <strong style="color:var(--text)">„Basisdaten 2025"</strong> – alle gemeinsamen Werte (Anschlussleistung, Indizes, Beschaffungskosten) werden automatisch befüllt. Diese Werte sind für <em>alle</em> Hofhäuser mit diesem Vertrag identisch.<br>
+  <strong style="color:var(--red)">2.</strong> Trage deinen <strong style="color:var(--red)">individuellen Verbrauch H1 und H2</strong> ein (✱ Pflichtfelder, aus Seite 2 deiner Abrechnung).<br>
+  <strong style="color:var(--col-auto)">3.</strong> Klicke <strong style="color:var(--text)">„Jahreskosten berechnen"</strong>.<br>
+  <span style="color:var(--muted);font-size:11px">Dezimalwerte mit Komma <em>oder</em> Punkt eingeben (0,08916 oder 0.08916). Verbrauch in kWh (nicht MWh): Wert aus Abrechnung ×1000.</span>
+</div>
+
+<!-- VORBEFÜLLEN -->
+<div class="prefill-bar">
+  <span class="prefill-label">Basisdaten laden:</span>
+  <button class="pbtn" onclick="prefill(2024)" id="pb24">Basisdaten 2024</button>
+  <button class="pbtn" onclick="prefill(2025)" id="pb25">Basisdaten 2025</button>
+  <button class="pbtn" onclick="clearAll()">Leeren</button>
+  <span style="font-size:11px;color:var(--muted);margin-left:auto">Alle Felder außer Verbrauch sind für alle Hofhäuser gleich</span>
+</div>
+
+<!-- FEHLER-BANNER -->
+<div class="err-banner" id="errBanner"></div>
+
+<div class="main">
+
+<!-- ══ GRUNDPREIS ══ -->
+<div class="card">
+  <div class="card-head"><div class="cnum">1</div><div class="card-title">Grundpreis — §&thinsp;5 Abs.&thinsp;2</div><div class="card-sub">Anpassung 1× jährlich zum 1. Jan.</div></div>
+  <div class="card-body">
+    <div class="formula">GP = GP₀ × (0,30 + 0,45 × I/I₀ + 0,25 × L/L₀)
+Basiswerte: I₀ = 94,4 · L₀ = 93,5 · GP₀(7 kW) = 253,65 €/a</div>
+    <div class="g2">
+      <div class="field f-u">
+        <label><div class="ld"></div><span class="ln">Anschlussleistung</span><span class="ls">kW</span></label>
+        <div class="inp-wrap"><input type="text" id="c_kw" value="7" oninput="onInput(this); updateGP0()"><span class="inp-unit">kW</span></div>
+        <div class="hint">Vertraglich festgelegt: <strong>7 kW</strong> (§2 Abs. 3). Änderung nur per schriftl. Vereinbarung.</div>
+      </div>
+      <div class="field f-a">
+        <label><div class="ld"></div><span class="ln">GP₀ Basiswert netto</span><span class="ls">automatisch</span></label>
+        <div class="inp-wrap"><input type="text" id="c_gp0d" readonly></div>
+        <div class="hint">Staffel: ≤10 kW: 253,65 €/a · 11–100 kW: +88,35 €/kW · ... Basis 2021=100</div>
+      </div>
+    </div>
+    <div class="g2">
+      <div class="field f-i">
+        <label><div class="ld"></div><span class="ln">I · EP-Investitionsgüter</span><span class="ls">FS17/R2 Nr. 3 · 2021=100 · Mittelw. Okt–Mrz</span></label>
+        <div class="inp-wrap"><input type="text" id="c_I" oninput="onInput(this)"></div>
+        <div class="hint">
+          <span>2024: 114,6 · 2025: 116,8</span>
+          <span class="src-tag">→ <a href="https://www-genesis.destatis.de/genesis/online?operation=table&code=61241-0004&bypass=true" target="_blank">GENESIS 61241-0004</a></span>
+          <span class="inv-ref">Abrechnung S. 4: Feld "I"</span>
+        </div>
+      </div>
+      <div class="field f-i">
+        <label><div class="ld"></div><span class="ln">L · Tarifverdienste Energie</span><span class="ls">FS16/R4.3 · 2020=100 · Q1</span></label>
+        <div class="inp-wrap"><input type="text" id="c_L" oninput="onInput(this)"></div>
+        <div class="hint">
+          <span>2024: 109,3 · 2025: 115,5</span>
+          <span class="src-tag">→ <a href="https://www-genesis.destatis.de/genesis/online?operation=table&code=62221-0004&bypass=true" target="_blank">GENESIS 62221-0004</a></span>
+          <span class="inv-ref">Abrechnung S. 4: Feld "L"</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ ARBEITSPREIS ══ -->
+<div class="card">
+  <div class="card-head"><div class="cnum">2</div><div class="card-title">Arbeitspreis — §&thinsp;5 Abs.&thinsp;3</div><div class="card-sub">Anpassung 2× jährlich zum 1. Jan. + 1. Jul.</div></div>
+  <div class="card-body">
+    <div class="formula">AP = 78,02 €/MWh × (0,43 × B/B₀ + 0,43 × GG/GG₀ + 0,07 × S/S₀ + 0,07 × SI/SI₀)
+B₀ = 0,03687 €/kWh · GG₀ = 89,9 · S₀ = 0,2097 €/kWh · SI₀ = 71,4</div>
+    <div class="wbox">⚠ <strong>B und S</strong> sind ECOenergys interne Beschaffungskosten – nicht unabhängig prüfbar. GG und SI sind öffentliche Destatis-Indizes zur Plausibilitätsprüfung.</div>
+    <div class="hy">
+      <div class="hy-card">
+        <div class="hy-title">1. Halbjahr (Januar – Juni)</div>
+        <div class="field f-e">
+          <label><div class="ld"></div><span class="ln">B · Erdgas-Beschaffung H1</span><span class="ls">€/kWh netto</span></label>
+          <div class="inp-wrap"><input type="text" id="c_B1" oninput="onInput(this); updateAPs()" placeholder="z.B. 0,08916"><span class="inp-unit">€/kWh</span></div>
+          <div class="hint"><span class="inv-ref">Abrechnung S. 4: "B … 01.01.–30.06."</span></div>
+        </div>
+        <div class="field f-i">
+          <label><div class="ld"></div><span class="ln">GG · Erdgas-Index H1</span><span class="ls">Nr. 635 · 2021=100</span></label>
+          <div class="inp-wrap"><input type="text" id="c_GG1" oninput="onInput(this); updateAPs()" placeholder="z.B. 188,7"></div>
+          <div class="hint">
+            <span class="src-tag">→ <a href="https://www-genesis.destatis.de/genesis/online?operation=table&code=61241-0006&bypass=true" target="_blank">GENESIS 61241-0006</a></span>
+            <span class="inv-ref">Abrechnung S. 4: "GG … 01.01.–30.06."</span>
+          </div>
+        </div>
+        <div class="field f-e">
+          <label><div class="ld"></div><span class="ln">S · Strom-Beschaffung H1</span><span class="ls">€/kWh netto</span></label>
+          <div class="inp-wrap"><input type="text" id="c_S1" oninput="onInput(this); updateAPs()" placeholder="z.B. 0,2195"><span class="inp-unit">€/kWh</span></div>
+          <div class="hint"><span class="inv-ref">Abrechnung S. 4: "S … 01.01.–30.06."</span></div>
+        </div>
+        <div class="field f-i">
+          <label><div class="ld"></div><span class="ln">SI · Strom-Index H1</span><span class="ls">Nr. 617 · 2021=100</span></label>
+          <div class="inp-wrap"><input type="text" id="c_SI1" oninput="onInput(this); updateAPs()" placeholder="z.B. 146,1"></div>
+          <div class="hint">
+            <span class="src-tag">→ <a href="https://www-genesis.destatis.de/genesis/online?operation=table&code=61241-0006&bypass=true" target="_blank">GENESIS 61241-0006</a></span>
+            <span class="inv-ref">Abrechnung S. 4: "SI … 01.01.–30.06."</span>
+          </div>
+        </div>
+        <div class="field f-a" style="margin-top:9px;padding-top:9px;border-top:1px solid var(--border)">
+          <label><div class="ld"></div><span class="ln">AP H1 (berechnet)</span><span class="ls">€/MWh netto</span></label>
+          <div class="inp-wrap"><input type="text" id="c_ap1d" readonly></div>
+        </div>
+      </div>
+      <div class="hy-card">
+        <div class="hy-title">2. Halbjahr (Juli – Dezember)</div>
+        <div class="field f-e">
+          <label><div class="ld"></div><span class="ln">B · Erdgas-Beschaffung H2</span><span class="ls">€/kWh netto</span></label>
+          <div class="inp-wrap"><input type="text" id="c_B2" oninput="onInput(this); updateAPs()" placeholder="z.B. 0,09040"><span class="inp-unit">€/kWh</span></div>
+          <div class="hint"><span class="inv-ref">Abrechnung S. 4: "B … 01.07.–31.12."</span></div>
+        </div>
+        <div class="field f-i">
+          <label><div class="ld"></div><span class="ln">GG · Erdgas-Index H2</span><span class="ls">Nr. 635 · 2021=100</span></label>
+          <div class="inp-wrap"><input type="text" id="c_GG2" oninput="onInput(this); updateAPs()" placeholder="z.B. 185,2"></div>
+          <div class="hint">
+            <span class="src-tag">→ <a href="https://www-genesis.destatis.de/genesis/online?operation=table&code=61241-0006&bypass=true" target="_blank">GENESIS 61241-0006</a></span>
+            <span class="inv-ref">Abrechnung S. 4: "GG … 01.07.–31.12."</span>
+          </div>
+        </div>
+        <div class="field f-e">
+          <label><div class="ld"></div><span class="ln">S · Strom-Beschaffung H2</span><span class="ls">€/kWh netto</span></label>
+          <div class="inp-wrap"><input type="text" id="c_S2" oninput="onInput(this); updateAPs()" placeholder="z.B. 0,2195"><span class="inp-unit">€/kWh</span></div>
+          <div class="hint"><span class="inv-ref">Abrechnung S. 4: "S … 01.07.–31.12."</span></div>
+        </div>
+        <div class="field f-i">
+          <label><div class="ld"></div><span class="ln">SI · Strom-Index H2</span><span class="ls">Nr. 617 · 2021=100</span></label>
+          <div class="inp-wrap"><input type="text" id="c_SI2" oninput="onInput(this); updateAPs()" placeholder="z.B. 132,3"></div>
+          <div class="hint">
+            <span class="src-tag">→ <a href="https://www-genesis.destatis.de/genesis/online?operation=table&code=61241-0006&bypass=true" target="_blank">GENESIS 61241-0006</a></span>
+            <span class="inv-ref">Abrechnung S. 4: "SI … 01.07.–31.12."</span>
+          </div>
+        </div>
+        <div class="field f-a" style="margin-top:9px;padding-top:9px;border-top:1px solid var(--border)">
+          <label><div class="ld"></div><span class="ln">AP H2 (berechnet)</span><span class="ls">€/MWh netto</span></label>
+          <div class="inp-wrap"><input type="text" id="c_ap2d" readonly></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ VERBRAUCH ══ -->
+<div class="card">
+  <div class="card-head"><div class="cnum">3</div><div class="card-title">Verbrauch &amp; MwSt. — §&thinsp;6</div><div class="card-sub">Ablesewerte Wärmemengenzähler · individuell</div></div>
+  <div class="card-body">
+    <div class="ibox">
+      ⚠ <strong>Einheit: kWh, nicht MWh!</strong> Die Abrechnung zeigt die Menge in MWh (z.B. "3,500 MWh") → du gibst <strong>3500</strong> ein (den Wert ×1000, ohne Komma). Die Aufteilung H1/H2 findest du auf Seite 2 der Abrechnung, Tabelle „Betragsberechnung", Spalte „Menge".
+    </div>
+    <div class="hy">
+      <div class="hy-card">
+        <div class="hy-title">1. Halbjahr (Jan – Jun)</div>
+        <div class="field f-req">
+          <label>
+            <div class="ld"></div>
+            <span class="ln">Verbrauch H1</span>
+            <span class="ls">kWh</span>
+            <span class="req-badge">✱ Pflichtfeld</span>
+          </label>
+          <div class="inp-wrap"><input type="text" id="c_kwh1" oninput="onInput(this)" placeholder="deinen Wert aus Abrechnung eintragen"><span class="inp-unit">kWh</span></div>
+          <div class="hint"><span class="req-note">Individuell – aus deiner eigenen Abrechnung übernehmen.</span></div>
+        </div>
+        <div class="field f-u">
+          <label><div class="ld"></div><span class="ln">MwSt. H1</span><span class="ls">%</span></label>
+          <div class="inp-wrap"><input type="text" id="c_vat1" value="19" oninput="onInput(this)"><span class="inp-unit">%</span></div>
+          <div class="hint">Standard: 19 %. Ausnahme: Q1-2024 = 7 % (Sondertarif Erdgas, inzwischen ausgelaufen).</div>
+        </div>
+      </div>
+      <div class="hy-card">
+        <div class="hy-title">2. Halbjahr (Jul – Dez)</div>
+        <div class="field f-req">
+          <label>
+            <div class="ld"></div>
+            <span class="ln">Verbrauch H2</span>
+            <span class="ls">kWh</span>
+            <span class="req-badge">✱ Pflichtfeld</span>
+          </label>
+          <div class="inp-wrap"><input type="text" id="c_kwh2" oninput="onInput(this)" placeholder="deinen Wert aus Abrechnung eintragen"><span class="inp-unit">kWh</span></div>
+          <div class="hint"><span class="req-note">Individuell – aus deiner eigenen Abrechnung übernehmen.</span></div>
+        </div>
+        <div class="field f-u">
+          <label><div class="ld"></div><span class="ln">MwSt. H2</span><span class="ls">%</span></label>
+          <div class="inp-wrap"><input type="text" id="c_vat2" value="19" oninput="onInput(this)"><span class="inp-unit">%</span></div>
+          <div class="hint">Ab Apr. 2024: immer 19 %.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- BERECHNEN -->
+<button class="btn" onclick="calculate()">▶&ensp;JAHRESKOSTEN BERECHNEN</button>
+
+<!-- ERGEBNIS -->
+<div id="result" style="display:none">
+  <div class="rcard">
+    <div class="rcard-head" style="background:var(--accent)">📊 Jahresergebnis</div>
+    <div class="rcard-body">
+      <div class="rrow">
+        <div class="rlabel"><strong>Grundpreis GP</strong> · netto/Jahr<div class="fdetail" id="r_gpf">—</div></div>
+        <div><div class="rval" id="r_gp">—</div><div class="rval dim" id="r_gpb">—</div></div>
+      </div>
+      <div class="rrow">
+        <div class="rlabel"><strong>Arbeitspreis H1</strong><div class="fdetail" id="r_ap1f">—</div></div>
+        <div class="rval" id="r_ap1">—</div>
+      </div>
+      <div class="rrow">
+        <div class="rlabel"><strong>Arbeitskosten H1</strong> · <span id="r_k1l">—</span> MWh × AP H1</div>
+        <div><div class="rval" id="r_ak1">—</div><div class="rval dim" id="r_ak1b">— brutto</div></div>
+      </div>
+      <div class="rrow">
+        <div class="rlabel"><strong>Arbeitspreis H2</strong><div class="fdetail" id="r_ap2f">—</div></div>
+        <div class="rval" id="r_ap2">—</div>
+      </div>
+      <div class="rrow">
+        <div class="rlabel"><strong>Arbeitskosten H2</strong> · <span id="r_k2l">—</span> MWh × AP H2</div>
+        <div><div class="rval" id="r_ak2">—</div><div class="rval dim" id="r_ak2b">— brutto</div></div>
+      </div>
+      <div class="rrow">
+        <div class="rlabel"><strong>Gesamt netto</strong></div>
+        <div class="rval" id="r_net">—</div>
+      </div>
+      <div class="rrow" style="padding:10px 0">
+        <div class="rlabel" style="font-size:14px"><strong>JAHRESBETRAG BRUTTO</strong></div>
+        <div class="rval total" id="r_gross">—</div>
+      </div>
+      <div class="rrow">
+        <div class="rlabel">Monatl. Abschlag (1/12 brutto)</div>
+        <div class="rval blue" id="r_mo">—</div>
+      </div>
+      <div class="rrow">
+        <div class="rlabel">Gesamtverbrauch</div>
+        <div class="rval" id="r_twh">—</div>
+      </div>
+      <div class="rrow">
+        <div class="rlabel">Effektive Kosten/kWh (brutto)</div>
+        <div class="rval" id="r_cpk">—</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ABGLEICH MIT BASISDATEN -->
+  <div class="rcard" id="checkCard" style="display:none">
+    <div class="rcard-head" style="background:var(--surface);color:var(--muted);font-size:12px">✓ Abgleich GP + AP mit Basisdaten (verbrauchsunabhängig – für alle gleich)</div>
+    <div class="rcard-body" id="checkBody"></div>
+  </div>
+
+  <!-- PLAUSIBILITÄT -->
+  <div class="rcard">
+    <div class="rcard-head" style="background:var(--surface);color:var(--muted);font-size:12px">🔍 Plausibilitätsprüfung B vs. GG-Index</div>
+    <div class="rcard-body">
+      <div class="ibox" id="plausbox">—</div>
+      <div style="font-size:11px;color:var(--muted);line-height:1.6">
+        Methode: GG bildet die öffentliche Marktentwicklung für Erdgas ab. B (intern) sollte sich grob in der gleichen Richtung bewegen. Starke Abweichungen können auf Langfristverträge oder ein Transparenzproblem hinweisen. Gemäß §24 Abs. 4 AVBFernwärmeV muss der prozentuale Anteil der Brennstoffkosten an der Preisänderung gesondert ausgewiesen werden.
+      </div>
+    </div>
+  </div>
+</div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── KONSTANTEN ─────────────────────────────────────────────
+const GP0_10=253.65, GP0_90=88.35, GP0_100=76.95, GP0_rest=65.55;
+const I0=94.4, L0=93.5, AP0=78.02;
+const B0=0.03687, GG0=89.9, S0=0.2097, SI0=71.4;
+
+// ── BASISDATEN (gleich für alle Hofhäuser) ─────────────────
+// Diese Werte gelten vertraglich oder per Abrechnungsperiode
+// für ALLE Kunden des Tarifs P-WÄ-GP4-122-0001 / P-WÄ-AP-101-0013.
+// Individuell einzutragen (Pflichtfelder): kwh1, kwh2.
+const BASE = {
+  2025: {
+    // Anschlussleistung: §2 Abs. 3 – für alle Hofhäuser 7 kW
+    kw:7,
+    // Destatis-Indizes: selbe Werte für alle (gleicher Abrechnungszeitraum)
+    I:116.8, L:115.5,
+    // ECOenergy Beschaffungskosten: gilt einheitlich für alle Kunden dieses Tarifs
+    B1:0.08916, GG1:188.7, S1:0.2195, SI1:146.1,
+    B2:0.09040, GG2:185.2, S2:0.2195, SI2:132.3,
+    // MwSt.: gesetzlich, gleich für alle (ab 2025 durchgängig 19 %)
+    vat1:19, vat2:19,
+    // Vergleichswerte Grundpreis + Arbeitspreis (für alle gleich, da kein Verbrauch)
+    exp_gp:295.66, exp_ap1:168.43843, exp_ap2:167.20504
+  },
+  2024: {
+    kw:7,
+    I:114.6, L:109.3,
+    B1:0.04387, GG1:197.8, S1:0.2182, SI1:150.4,
+    B2:0.04511, GG2:190.5, S2:0.2182, SI2:145.2,
+    // Hinweis: Q1-2024 galt 7 % MwSt auf Wärme (Sondertarif, ausgelaufen).
+    // Wer 2024 nachrechnen möchte, muss vat1 manuell auf 7 setzen für Q1.
+    vat1:19, vat2:19,
+    exp_gp:288.79, exp_ap1:130.91929, exp_ap2:128.92565
+  }
+};
+
+let currentPrefill = null;
+
+// ── INPUT HANDLER: Komma → Punkt ──────────────────────────
+function onInput(el) {
+  // Komma durch Punkt ersetzen für parseFloat
+  // Wir speichern in data-val den normalisierten Wert
+  const raw = el.value;
+  el.dataset.val = raw.replace(',', '.');
+  // Validierung: Warnung wenn nach Konvertierung NaN
+  const n = parseFloat(el.dataset.val);
+  if (raw !== '' && isNaN(n)) {
+    el.classList.add('inp-warn');
+  } else {
+    el.classList.remove('inp-warn');
+  }
+}
+
+function getVal(id) {
+  const el = document.getElementById(id);
+  if (!el) return NaN;
+  // Bevorzuge data-val (normalisiert), sonst raw value mit Komma→Punkt
+  const raw = (el.dataset.val !== undefined ? el.dataset.val : el.value).replace(',','.');
+  return parseFloat(raw);
+}
+
+function setVal(id, val) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  // Display mit Komma (deutsch), aber data-val mit Punkt
+  const str = typeof val === 'number' ? String(val) : val;
+  el.value = str.replace('.', ',');
+  el.dataset.val = str;
+  el.classList.remove('inp-warn');
+}
+
+// ── GP0 STAFFEL ────────────────────────────────────────────
+function gp0(kw) {
+  if(kw<=10)  return GP0_10;
+  if(kw<=100) return GP0_10+(kw-10)*GP0_90;
+  if(kw<=200) return GP0_10+90*GP0_90+(kw-100)*GP0_100;
+  return GP0_10+90*GP0_90+100*GP0_100+(kw-200)*GP0_rest;
+}
+
+function updateGP0() {
+  const kw = getVal('c_kw') || 7;
+  document.getElementById('c_gp0d').value = fmt(gp0(kw)) + ' €/a';
+}
+
+// ── AP LIVE-UPDATE ─────────────────────────────────────────
+function calcAP(B, GG, S, SI) {
+  return AP0 * (0.43*(B/B0) + 0.43*(GG/GG0) + 0.07*(S/S0) + 0.07*(SI/SI0));
+}
+
+function updateAPs() {
+  const B1=getVal('c_B1'), GG1=getVal('c_GG1'), S1=getVal('c_S1'), SI1=getVal('c_SI1');
+  const B2=getVal('c_B2'), GG2=getVal('c_GG2'), S2=getVal('c_S2'), SI2=getVal('c_SI2');
+  if (!isNaN(B1)&&!isNaN(GG1)&&!isNaN(S1)&&!isNaN(SI1))
+    document.getElementById('c_ap1d').value = fN(calcAP(B1,GG1,S1,SI1),5) + ' €/MWh';
+  if (!isNaN(B2)&&!isNaN(GG2)&&!isNaN(S2)&&!isNaN(SI2))
+    document.getElementById('c_ap2d').value = fN(calcAP(B2,GG2,S2,SI2),5) + ' €/MWh';
+}
+
+// ── PREFILL ────────────────────────────────────────────────
+// Befüllt NUR die gemeinsamen Basisdaten (alle Hofhäuser gleich).
+// kwh1 und kwh2 werden NICHT gesetzt – das sind individuelle Werte!
+function prefill(year) {
+  const d = BASE[year];
+  if (!d) return;
+  currentPrefill = year;
+  document.querySelectorAll('.pbtn').forEach(b => b.classList.remove('active'));
+  document.getElementById('pb'+year)?.classList.add('active');
+
+  const fields = {
+    c_kw:d.kw, c_I:d.I, c_L:d.L,
+    c_B1:d.B1, c_GG1:d.GG1, c_S1:d.S1, c_SI1:d.SI1,
+    c_B2:d.B2, c_GG2:d.GG2, c_S2:d.S2, c_SI2:d.SI2,
+    c_vat1:d.vat1, c_vat2:d.vat2
+    // kwh1, kwh2 bewusst nicht gesetzt → individueller Verbrauch, Pflichtfeld
+  };
+  for (const [id, val] of Object.entries(fields)) setVal(id, val);
+  // Pflichtfelder Verbrauch leeren und hervorheben
+  ['c_kwh1','c_kwh2'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { el.value = ''; el.dataset.val = ''; el.classList.remove('inp-warn'); }
+  });
+  updateGP0();
+  updateAPs();
+  document.getElementById('result').style.display = 'none';
+  showToast(`Basisdaten ${year} geladen – Verbrauch H1 und H2 bitte selbst eintragen`);
+}
+
+function clearAll() {
+  currentPrefill = null;
+  document.querySelectorAll('.pbtn').forEach(b=>b.classList.remove('active'));
+  ['c_kw','c_I','c_L','c_B1','c_GG1','c_S1','c_SI1','c_B2','c_GG2','c_S2','c_SI2','c_kwh1','c_kwh2','c_vat1','c_vat2'].forEach(id=>{
+    const el=document.getElementById(id); if(el){el.value='';el.dataset.val='';el.classList.remove('inp-warn');}
+  });
+  document.getElementById('c_gp0d').value='';
+  document.getElementById('c_ap1d').value='';
+  document.getElementById('c_ap2d').value='';
+  document.getElementById('result').style.display='none';
+}
+
+// ── HAUPTRECHNUNG ──────────────────────────────────────────
+function calculate() {
+  // Fehler-Check
+  const reqIds = ['c_kw','c_I','c_L','c_B1','c_GG1','c_S1','c_SI1','c_B2','c_GG2','c_S2','c_SI2','c_kwh1','c_kwh2','c_vat1','c_vat2'];
+  let errors = [];
+  reqIds.forEach(id => {
+    const v = getVal(id);
+    if (isNaN(v) || document.getElementById(id).value === '') {
+      document.getElementById(id).classList.add('inp-warn');
+      errors.push(id);
+    }
+  });
+  if (errors.length > 0) {
+    const banner = document.getElementById('errBanner');
+    banner.style.display = 'block';
+    banner.innerHTML = `⚠ ${errors.length} Feld(er) fehlen oder haben ungültige Werte (rot markiert). Dezimalzahlen mit Komma oder Punkt eingeben, z.B. <strong>0,08916</strong>. Für Verbrauch: kWh eingeben, nicht MWh – Wert aus Abrechnung ×1000 (z.B. 3,500 MWh → <strong>3500</strong> kWh).`;
+    return;
+  }
+  document.getElementById('errBanner').style.display = 'none';
+
+  const kw   = getVal('c_kw');
+  const I    = getVal('c_I'), L=getVal('c_L');
+  const B1   = getVal('c_B1'), GG1=getVal('c_GG1'), S1=getVal('c_S1'), SI1=getVal('c_SI1');
+  const B2   = getVal('c_B2'), GG2=getVal('c_GG2'), S2=getVal('c_S2'), SI2=getVal('c_SI2');
+  const kwh1 = getVal('c_kwh1'), kwh2=getVal('c_kwh2');
+  const vat1 = getVal('c_vat1')/100, vat2=getVal('c_vat2')/100;
+
+  const GP0v = gp0(kw);
+  const gpF  = 0.30 + 0.45*(I/I0) + 0.25*(L/L0);
+  const GP   = GP0v * gpF;
+  const ap1  = calcAP(B1,GG1,S1,SI1);
+  const ap2  = calcAP(B2,GG2,S2,SI2);
+  const ak1  = (kwh1/1000)*ap1;
+  const ak2  = (kwh2/1000)*ap2;
+  const tkwh = kwh1+kwh2;
+
+  // GP anteilig nach Verbrauch (für MwSt-Aufteilung bei gemischten Sätzen)
+  const gp1  = tkwh>0 ? GP*(kwh1/tkwh) : GP/2;
+  const gp2  = GP-gp1;
+  const n1   = gp1+ak1, n2=gp2+ak2;
+  const g1   = n1*(1+vat1), g2=n2*(1+vat2);
+  const tn   = n1+n2, tg=g1+g2;
+
+  s('r_gp',  fmt(GP)+' €/a netto');
+  s('r_gpb', fmt(GP*(1+Math.max(vat1,vat2)))+' €/a brutto');
+  s('r_gpf', `GP₀ ${fmt(GP0v)} × (0,30 + 0,45×${fN(I/I0,4)} + 0,25×${fN(L/L0,4)}) = ×${fN(gpF,5)}`);
+  s('r_ap1', fN(ap1,5)+' €/MWh netto');
+  s('r_ap1f', `78,02×(0,43×${fN(B1/B0,3)} + 0,43×${fN(GG1/GG0,3)} + 0,07×${fN(S1/S0,3)} + 0,07×${fN(SI1/SI0,3)})`);
+  s('r_k1l',  fN(kwh1/1000,3));
+  s('r_ak1',  fmt(ak1)+' € netto');
+  s('r_ak1b', fmt(ak1*(1+vat1))+' € brutto');
+  s('r_ap2', fN(ap2,5)+' €/MWh netto');
+  s('r_ap2f', `78,02×(0,43×${fN(B2/B0,3)} + 0,43×${fN(GG2/GG0,3)} + 0,07×${fN(S2/S0,3)} + 0,07×${fN(SI2/SI0,3)})`);
+  s('r_k2l',  fN(kwh2/1000,3));
+  s('r_ak2',  fmt(ak2)+' € netto');
+  s('r_ak2b', fmt(ak2*(1+vat2))+' € brutto');
+  s('r_net',  fmt(tn)+' €');
+  document.getElementById('r_gross').textContent = fmt(tg)+' €';
+  s('r_mo',   fmt(tg/12)+' €/Monat');
+  s('r_twh',  fN(tkwh/1000,3)+' MWh ('+Math.round(tkwh).toLocaleString('de-DE')+' kWh)');
+  s('r_cpk',  tkwh>0 ? fN(tg/tkwh*100,4)+' ct/kWh' : '—');
+
+  // Plausibilität B vs GG
+  const b_avg  = (B1+B2)/2, gg_avg=(GG1+GG2)/2;
+  const b_chg  = (b_avg/B0 - 1)*100, gg_chg=(gg_avg/GG0 - 1)*100;
+  const diff   = b_chg - gg_chg;
+  let plaus;
+  if (Math.abs(diff) < 15)
+    plaus = `✅ B (+${fN(b_chg,1)}%) und GG-Index (+${fN(gg_chg,1)}%) entwickeln sich ähnlich. Kein Auffälligkeiten.`;
+  else if (diff > 15)
+    plaus = `⚠️ B (+${fN(b_chg,1)}%) ist um ${fN(diff,1)} Prozentpunkte stärker gestiegen als der öffentliche GG-Index (+${fN(gg_chg,1)}%). Empfehlung: Schriftlich qualitative Erklärung bei ECOenergy anfordern und auf §24 Abs. 4 AVBFernwärmeV hinweisen.`;
+  else
+    plaus = `ℹ️ B (+${fN(b_chg,1)}%) liegt unter dem GG-Index (+${fN(gg_chg,1)}%). Kein Handlungsbedarf.`;
+  s('plausbox', plaus);
+
+  // Abgleich wenn vorbefüllt: nur GP + AP prüfen (diese sind für alle gleich)
+  const cc = document.getElementById('checkCard');
+  if (currentPrefill && BASE[currentPrefill]) {
+    cc.style.display = '';
+    const d = BASE[currentPrefill];
+    const rows = [
+      ['Grundpreis GP (für alle gleich)', GP, d.exp_gp, 0.01],
+      ['Arbeitspreis H1 (für alle gleich)', ap1, d.exp_ap1, 0.001],
+      ['Arbeitspreis H2 (für alle gleich)', ap2, d.exp_ap2, 0.001],
+    ];
+    let html = '';
+    let allOk = true;
+    rows.forEach(([lbl, calc, exp, tol]) => {
+      if (exp === null) return;
+      const ok = Math.abs(calc-exp) < tol;
+      if (!ok) allOk = false;
+      html += `<div class="rrow"><div class="rlabel"><strong>${lbl}</strong></div>
+        <div style="text-align:right">
+          <div class="rval ${ok?'':'red'}">${fN(calc,2)} €</div>
+          <div class="rval dim">Erwartet: ${fN(exp,2)} € <span class="${ok?'chk-ok':'chk-err'}">${ok?'✓':'✗'}</span></div>
+        </div></div>`;
+    });
+    if (allOk) html = `<div style="color:var(--green);font-weight:700;font-family:var(--mono);font-size:13px;margin-bottom:10px">✓ GP und AP stimmen mit den Basisdaten ${currentPrefill} überein.</div>` + html;
+    document.getElementById('checkBody').innerHTML = html;
+  } else {
+    cc.style.display = 'none';
+  }
+
+  document.getElementById('result').style.display='';
+  document.getElementById('result').scrollIntoView({behavior:'smooth', block:'nearest'});
+}
+
+// ── HELPERS ────────────────────────────────────────────────
+function s(id,v){const e=document.getElementById(id);if(e)e.textContent=v;}
+function fmt(n){return n.toLocaleString('de-DE',{minimumFractionDigits:2,maximumFractionDigits:2});}
+function fN(n,d){return n.toLocaleString('de-DE',{minimumFractionDigits:d,maximumFractionDigits:d});}
+function showToast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 2500);
+}
+
+// ── INIT ───────────────────────────────────────────────────
+updateGP0();
+</script>
+</body>
+</html>
